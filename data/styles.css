@@ -1,0 +1,22 @@
+.player0 {
+    background-color: aqua;
+}
+
+.player1 {
+    background-color: #ff7e7e;
+}
+
+.neutralTown {
+    background-color: #ababab;
+}
+
+.mountain {
+    background-color: #757575;
+}
+
+.space {
+    border: 1px solid black;
+    width: 40px;
+    height: 40px;
+    text-align: center;
+}
