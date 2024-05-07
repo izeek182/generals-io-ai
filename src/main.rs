@@ -1,5 +1,8 @@
+#![allow(clippy::needless_range_loop)]
+
 use std::{net::SocketAddr, time::Duration};
 
+use ai::Ai;
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -9,13 +12,14 @@ use axum::{
     routing::get,
     Router,
 };
-use game_state::GameState;
+use game_state::{GameState, Space, BOARD_SIZE};
 use tokio::{
     sync::broadcast::{self, Receiver, Sender},
     time::sleep,
 };
 use tower_http::services::ServeDir;
 
+mod ai;
 mod game_state;
 
 async fn ws_handler(
@@ -49,7 +53,12 @@ async fn handle_socket(mut socket: WebSocket, mut reciever: Receiver<GameState>)
 
 #[tokio::main]
 async fn main() {
-    let mut game_state = GameState::new(2);
+    let players = std::env::args()
+        .skip(1)
+        .map(|arg| Ai::from_arg(&arg))
+        .collect::<Vec<_>>();
+
+    let mut game_state = GameState::new(players.len());
 
     let (game_state_sender, _) = broadcast::channel::<GameState>(16);
 
@@ -71,13 +80,53 @@ async fn main() {
     });
 
     loop {
-        // TODO: Get moves here
-        // game_state.handle_moves()
+        let mut moves = players
+            .iter()
+            .enumerate()
+            .flat_map(|(i, ai)| ai.make_move(&game_state.spaces, i).map(|m| (i, m)))
+            .collect::<Vec<_>>();
+
+        // dbg!(&moves);
+        // dbg!(&game_state);
+
+        let moves = moves
+            .into_iter()
+            .filter(|(player, m)| {
+                if [m.to.x, m.to.y, m.from.x, m.from.y]
+                    .iter()
+                    .any(|coord| *coord > BOARD_SIZE)
+                {
+                    println!("Player {player} tried to make a move that was out of bounds. {m:?}");
+                    todo!();
+                    false
+                } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(*player) {
+                    println!(
+                        "Player {player} tried to make a move from a space they didn't own. {m:?}"
+                    );
+                    todo!();
+                    false
+                } else if game_state.spaces[m.from.x][m.from.y] == Space::Mountain {
+                    println!("Player {player} tried to make a move onto a mountain. {m:?}");
+                    todo!();
+                    false
+                } else {
+                    true
+                }
+            })
+            .map(|(_, m)| m)
+            .collect();
+
+        game_state.handle_moves(moves);
+
         game_state.populate_spaces();
+
+        // TODO: Handle player elimination, game over
+
+        game_state.turn += 1;
 
         // Ignore errors because there might be no subcribers
         let _ = game_state_sender.send(game_state.clone());
 
-        sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_millis(100)).await;
     }
 }
