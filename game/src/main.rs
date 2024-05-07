@@ -12,7 +12,8 @@ use axum::{
     routing::get,
     Router,
 };
-use game_state::{GameState, Space, BOARD_SIZE};
+use game_state::{GameState, BOARD_SIZE};
+use model::Space;
 use tokio::{
     sync::broadcast::{self, Receiver, Sender},
     time::sleep,
@@ -65,7 +66,7 @@ async fn main() {
     let websocket_sender = game_state_sender.clone();
 
     tokio::spawn(async move {
-        let addr = SocketAddr::from(([127, 0, 0, 1], 8082));
+        let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
         axum::serve(
@@ -80,14 +81,13 @@ async fn main() {
     });
 
     loop {
-        let mut moves = players
-            .iter()
-            .enumerate()
-            .flat_map(|(i, ai)| ai.make_move(&game_state.spaces, i).map(|m| (i, m)))
-            .collect::<Vec<_>>();
+        let mut moves = vec![];
 
-        // dbg!(&moves);
-        // dbg!(&game_state);
+        for (i, ai) in players.iter().enumerate() {
+            if let Some(m) = ai.make_move(game_state.turn, &game_state.spaces, i).await {
+                moves.push((i, m));
+            }
+        }
 
         let moves = moves
             .into_iter()
@@ -97,17 +97,14 @@ async fn main() {
                     .any(|coord| *coord > BOARD_SIZE)
                 {
                     println!("Player {player} tried to make a move that was out of bounds. {m:?}");
-                    todo!();
                     false
                 } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(*player) {
                     println!(
                         "Player {player} tried to make a move from a space they didn't own. {m:?}"
                     );
-                    todo!();
                     false
                 } else if game_state.spaces[m.from.x][m.from.y] == Space::Mountain {
                     println!("Player {player} tried to make a move onto a mountain. {m:?}");
-                    todo!();
                     false
                 } else {
                     true
@@ -127,6 +124,6 @@ async fn main() {
         // Ignore errors because there might be no subcribers
         let _ = game_state_sender.send(game_state.clone());
 
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(50)).await;
     }
 }
