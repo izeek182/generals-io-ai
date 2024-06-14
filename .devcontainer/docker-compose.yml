@@ -1,39 +1,6 @@
 version: '3.8'
 
 services:
-  random-ai:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8081:8081"
-    working_dir: /workspace
-    command: [ "cargo", "run", "-p", "random-ai", "--", "8081" ]
-    volumes:
-      - ../:/workspace
-
-  jroylance-ai:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8082:8082"
-    working_dir: /workspace
-    command: [ "cargo", "run", "-p", "jroylance-ai", "--", "8082" ]
-    volumes:
-      - ../:/workspace
-
-  custom-ai:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8083:8083"
-    working_dir: /workspace
-    command: [ "cargo", "run", "-p", "custom-ai", "--", "8083" ]
-    volumes:
-      - ../:/workspace
-
   game-server:
     build:
       context: .
@@ -41,20 +8,6 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     working_dir: /workspace
-    command:
-      [
-        "cargo",
-        "run",
-        "-p",
-        "game",
-        "--",
-        "8081",
-        "8082",
-        "8083"
-      ]
-    depends_on:
-      - random-ai
-      - jroylance-ai
-      - custom-ai
+    command: /bin/sh -c "while sleep 1000; do :; done"
     volumes:
       - ../:/workspace

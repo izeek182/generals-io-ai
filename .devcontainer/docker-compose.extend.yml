@@ -1,6 +1,6 @@
 version: '3'
 services:
-  custom-ai:
+  game-server:
 
     # [Optional] Required for ptrace-based debuggers like C++, Go, and Rust
     cap_add:
