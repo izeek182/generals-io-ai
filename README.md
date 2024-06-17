@@ -14,6 +14,4 @@
 -   Leave 1 unit behind when making a move
 -   Artwork on spaces
 -   End game when only one player remains
--   Time out requests to player servers
--   Make player server requests in parallel
 -   Stop making requests to AIs for players that don't exist
