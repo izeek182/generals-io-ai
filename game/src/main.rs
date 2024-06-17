@@ -98,9 +98,11 @@ async fn main() {
         .unwrap();
     });
 
+    let reqwest_client = reqwest::Client::new();
+
     loop {
         let moves = join_all(players.iter().enumerate().map(|(i, ai)| {
-            ai.make_move(game_state.turn, &game_state.spaces, i)
+            ai.make_move(&reqwest_client, game_state.turn, &game_state.spaces, i)
                 .map(move |m| m.map(|m| (i, m)))
         }))
         .await;

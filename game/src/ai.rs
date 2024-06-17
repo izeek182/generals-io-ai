@@ -40,13 +40,19 @@ impl Ai {
         Ok(Self { host, port })
     }
 
-    pub async fn make_move(&self, turn: usize, spaces: &Spaces, player: usize) -> Option<Move> {
+    pub async fn make_move(
+        &self,
+        reqwest_client: &reqwest::Client,
+        turn: usize,
+        spaces: &Spaces,
+        player: usize,
+    ) -> Option<Move> {
         let request_body = TurnRequest {
             turn,
             player,
             spaces: *spaces,
         };
-        let response: Option<TurnResponse> = reqwest::Client::new()
+        let response: Option<TurnResponse> = reqwest_client
             .post(format!("http://{}:{}", self.host, self.port))
             .timeout(Duration::from_millis(500))
             .json(&request_body)
