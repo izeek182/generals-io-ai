@@ -122,7 +122,7 @@ async fn main() {
                         "Player {player} tried to make a move from a space they didn't own. {m:?}"
                     );
                     false
-                } else if game_state.spaces[m.from.x][m.from.y] == Space::Mountain {
+                } else if game_state.spaces[m.to.x][m.to.y] == Space::Mountain {
                     println!("Player {player} tried to make a move onto a mountain. {m:?}");
                     false
                 } else {

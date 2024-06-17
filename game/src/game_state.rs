@@ -206,7 +206,7 @@ impl GameState {
                             owner: *owner,
                             units: remaining_units,
                         },
-                        Space::Mountain => unimplemented!(),
+                        Space::Mountain => panic!("Tried to conquer a mountain"),
                     }
                 } else {
                     // Defender wins
