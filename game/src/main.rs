@@ -10,6 +10,7 @@ use axum::{
     routing::get,
     Router,
 };
+use futures::{future::join_all, FutureExt};
 use game_state::{GameState, BOARD_SIZE};
 use model::Space;
 use std::process;
@@ -98,16 +99,15 @@ async fn main() {
     });
 
     loop {
-        let mut moves = vec![];
-
-        for (i, ai) in players.iter().enumerate() {
-            if let Some(m) = ai.make_move(game_state.turn, &game_state.spaces, i).await {
-                moves.push((i, m));
-            }
-        }
+        let moves = join_all(players.iter().enumerate().map(|(i, ai)| {
+            ai.make_move(game_state.turn, &game_state.spaces, i)
+                .map(move |m| m.map(|m| (i, m)))
+        }))
+        .await;
 
         let moves = moves
             .into_iter()
+            .flatten()
             .filter(|(player, m)| {
                 if [m.to.x, m.to.y, m.from.x, m.from.y]
                     .iter()

@@ -8,6 +8,7 @@ model = { path = "../model" }
 
 axum.workspace = true
 axum.features = ["ws"]
+futures.workspace = true
 rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true
