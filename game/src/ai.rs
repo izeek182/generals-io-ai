@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::game_state::Move;
 
 use model::{Spaces, TurnRequest, TurnResponse};
@@ -46,6 +48,7 @@ impl Ai {
         };
         let response: Option<TurnResponse> = reqwest::Client::new()
             .post(format!("http://{}:{}", self.host, self.port))
+            .timeout(Duration::from_millis(500))
             .json(&request_body)
             .send()
             .await
