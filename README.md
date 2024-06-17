@@ -13,4 +13,3 @@
 
 -   Leave 1 unit behind when making a move
 -   Artwork on spaces
--   End game when only one player remains

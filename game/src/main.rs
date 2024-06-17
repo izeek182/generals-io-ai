@@ -142,7 +142,10 @@ async fn main() {
 
         game_state.populate_spaces();
 
-        // TODO: Handle player elimination, game over
+        if game_state.remaining_players().len() <= 1 {
+            println!("Game over");
+            break;
+        }
 
         game_state.turn += 1;
 
