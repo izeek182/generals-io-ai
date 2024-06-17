@@ -105,32 +105,30 @@ async fn main() {
             ai.make_move(&reqwest_client, game_state.turn, &game_state.spaces, i)
                 .map(move |m| m.map(|m| (i, m)))
         }))
-        .await;
-
-        let moves = moves
-            .into_iter()
-            .flatten()
-            .filter(|(player, m)| {
-                if [m.to.x, m.to.y, m.from.x, m.from.y]
-                    .iter()
-                    .any(|coord| *coord > BOARD_SIZE)
-                {
-                    println!("Player {player} tried to make a move that was out of bounds. {m:?}");
-                    false
-                } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(*player) {
-                    println!(
-                        "Player {player} tried to make a move from a space they didn't own. {m:?}"
-                    );
-                    false
-                } else if game_state.spaces[m.to.x][m.to.y] == Space::Mountain {
-                    println!("Player {player} tried to make a move onto a mountain. {m:?}");
-                    false
-                } else {
-                    true
-                }
-            })
-            .map(|(_, m)| m)
-            .collect();
+        .await
+        .into_iter()
+        .flatten()
+        .filter(|(player, m)| {
+            if [m.to.x, m.to.y, m.from.x, m.from.y]
+                .iter()
+                .any(|coord| *coord > BOARD_SIZE)
+            {
+                println!("Player {player} tried to make a move that was out of bounds. {m:?}");
+                false
+            } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(*player) {
+                println!(
+                    "Player {player} tried to make a move from a space they didn't own. {m:?}"
+                );
+                false
+            } else if game_state.spaces[m.to.x][m.to.y] == Space::Mountain {
+                println!("Player {player} tried to make a move onto a mountain. {m:?}");
+                false
+            } else {
+                true
+            }
+        })
+        .map(|(_, m)| m)
+        .collect();
 
         game_state.handle_moves(moves);
 
