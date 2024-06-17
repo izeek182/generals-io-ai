@@ -1,7 +1,5 @@
 #![allow(clippy::needless_range_loop)]
 
-use std::process;
-use std::{net::{SocketAddr,IpAddr}, time::Duration};
 use ai::Ai;
 use axum::{
     extract::{
@@ -14,6 +12,11 @@ use axum::{
 };
 use game_state::{GameState, BOARD_SIZE};
 use model::Space;
+use std::process;
+use std::{
+    net::{IpAddr, SocketAddr},
+    time::Duration,
+};
 use tokio::{
     sync::broadcast::{self, Receiver, Sender},
     time::sleep,
@@ -75,7 +78,7 @@ async fn main() {
 
         let host = std::env::var("HOST_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string());
         let ip: IpAddr = host.parse().expect("Invalid IP address");
-        
+
         let addr = SocketAddr::from((ip, port));
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
