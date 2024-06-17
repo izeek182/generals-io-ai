@@ -1,6 +1,6 @@
 use std::{
     borrow::BorrowMut,
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::{Display, Write},
 };
 
@@ -238,6 +238,19 @@ impl GameState {
                 }
             }
         }
+    }
+
+    pub fn remaining_players(&self) -> BTreeSet<usize> {
+        let mut remaining_players = BTreeSet::new();
+
+        for x in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                self.spaces[x][y]
+                    .owner()
+                    .map(|owner| remaining_players.insert(owner));
+            }
+        }
+        remaining_players
     }
 }
 
