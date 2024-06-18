@@ -48,13 +48,13 @@ impl Display for Coordinate {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Space {
-    PlayerCapital { owner: usize, units: usize },
-    PlayerTown { owner: usize, units: usize },
+    PlayerCapital { owner: String, units: usize },
+    PlayerTown { owner: String, units: usize },
     NeutralTown { units: usize },
-    PlayerEmpty { owner: usize, units: usize },
+    PlayerEmpty { owner: String, units: usize },
     Empty,
     Mountain,
 }
@@ -79,11 +79,11 @@ impl Space {
             }
         }
     }
-    pub fn owner(&self) -> Option<usize> {
+    pub fn owner(&self) -> Option<&str> {
         match self {
-            Space::PlayerCapital { owner, units: _ } => Some(*owner),
-            Space::PlayerTown { owner, units: _ } => Some(*owner),
-            Space::PlayerEmpty { owner, units: _ } => Some(*owner),
+            Space::PlayerCapital { owner, units: _ } => Some(owner),
+            Space::PlayerTown { owner, units: _ } => Some(owner),
+            Space::PlayerEmpty { owner, units: _ } => Some(owner),
             Space::NeutralTown { .. } | Space::Empty | Space::Mountain => None,
         }
     }
@@ -93,8 +93,9 @@ pub type Spaces = [[Space; BOARD_SIZE]; BOARD_SIZE];
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TurnRequest {
+    pub game_id: String,
+    pub player_id: String,
     pub turn: usize,
-    pub player: usize,
     pub spaces: Spaces,
 }
 

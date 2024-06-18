@@ -5,6 +5,36 @@ socket.addEventListener("open", (event) => {
     console.log("Connected");
 });
 
+let colorCache = {};
+function getRandomColorForPlayerId(playerId) {
+    if (!(playerId in colorCache)) {
+        // Function to generate a random number between 0 and 255
+        function getRandomInt() {
+            return Math.floor(Math.random() * 256);
+        }
+
+        // Convert a number to a two-digit hexadecimal string
+        function toHex(number) {
+            return number.toString(16).padStart(2, "0");
+        }
+
+        let red, green, blue;
+
+        // Keep generating colors until we get one that is bright enough
+        do {
+            red = getRandomInt();
+            green = getRandomInt();
+            blue = getRandomInt();
+        } while (red + green + blue <= 400);
+
+        // Convert each value to a hexadecimal string and concatenate
+        const rgbHex = `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+
+        colorCache[playerId] = rgbHex;
+    }
+    return colorCache[playerId];
+}
+
 // Listen for messages
 socket.addEventListener("message", (event) => {
     const spaces = JSON.parse(event.data)["spaces"];
@@ -28,16 +58,22 @@ socket.addEventListener("message", (event) => {
             const td = document.createElement("td");
             if (cell["type"] == "PlayerCapital") {
                 td.innerHTML = `P<br />${cell["units"]}`;
-                td.classList.add(`player${cell["owner"]}`);
+                td.style.backgroundColor = getRandomColorForPlayerId(
+                    cell["owner"],
+                );
             } else if (cell["type"] == "PlayerTown") {
                 td.innerHTML = `p<br />${cell["units"]}`;
-                td.classList.add(`player${cell["owner"]}`);
+                td.style.backgroundColor = getRandomColorForPlayerId(
+                    cell["owner"],
+                );
             } else if (cell["type"] == "NeutralTown") {
                 td.innerHTML = `t<br />${cell["units"]}`;
                 td.classList.add(`neutralTown`);
             } else if (cell["type"] == "PlayerEmpty") {
                 td.innerHTML = `${cell["units"]}`;
-                td.classList.add(`player${cell["owner"]}`);
+                td.style.backgroundColor = getRandomColorForPlayerId(
+                    cell["owner"],
+                );
             } else if (cell["type"] == "Empty") {
                 td.innerHTML = "";
             } else if (cell["type"] == "Mountain") {
@@ -53,9 +89,11 @@ socket.addEventListener("message", (event) => {
     }
 
     const leaderboard = document.createElement("table");
-    for (const [key, value] of Object.entries(playerStats)) {
+    for (const [key, value] of Object.entries(playerStats).sort((a, b) =>
+        a[0].localeCompare(b[0]),
+    )) {
         const tr = document.createElement("tr");
-        tr.classList.add(`player${key}`);
+        tr.style.backgroundColor = getRandomColorForPlayerId(key);
 
         const td1 = document.createElement("td");
         td1.innerText = `Player ${key}`;

@@ -9,7 +9,7 @@ use itertools::Itertools;
 use model::{Coordinate, Space, Spaces, TurnRequest, TurnResponse, BOARD_SIZE};
 use rand::prelude::*;
 
-fn distance(from: Coordinate, to: Coordinate, spaces: Spaces) -> (usize, Vec<Coordinate>) {
+fn distance(from: Coordinate, to: Coordinate, spaces: &Spaces) -> (usize, Vec<Coordinate>) {
     let mut visited = [[false; 20]; 20];
     let mut queue = VecDeque::new();
     let mut predecessors = HashMap::new();
@@ -49,7 +49,9 @@ async fn turn_handler(
     let mut my_spaces_with_units = vec![];
     for x in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
-            if body.spaces[x][y].owner() == Some(body.player) && body.spaces[x][y].get_units() > 0 {
+            if body.spaces[x][y].owner() == Some(&body.player_id)
+                && body.spaces[x][y].get_units() > 0
+            {
                 my_spaces_with_units.push(Coordinate { x, y });
             }
         }
@@ -61,7 +63,7 @@ async fn turn_handler(
         .flat_map(|from| {
             from.surrounding().into_iter().filter(|to| {
                 body.spaces[to.x][to.y] != Space::Mountain
-                    && body.spaces[to.x][to.y].owner() != Some(body.player)
+                    && body.spaces[to.x][to.y].owner() != Some(&body.player_id)
             })
         })
         .unique()
@@ -82,7 +84,7 @@ async fn turn_handler(
             if my_units > their_units {
                 let (distance, path) = cache
                     .entry((*my_space, *their_space))
-                    .or_insert_with(|| distance(*my_space, *their_space, body.spaces));
+                    .or_insert_with(|| distance(*my_space, *their_space, &body.spaces));
 
                 let weight = {
                     let target_priority = match body.spaces[their_space.x][their_space.y] {

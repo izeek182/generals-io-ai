@@ -10,10 +10,10 @@ use axum::{
     routing::get,
     Router,
 };
-use futures::{future::join_all, FutureExt};
+use futures::future::join_all;
 use game_state::{GameState, BOARD_SIZE};
 use model::Space;
-use std::process;
+use std::collections::BTreeMap;
 use std::{
     net::{IpAddr, SocketAddr},
     time::Duration,
@@ -23,6 +23,7 @@ use tokio::{
     time::sleep,
 };
 use tower_http::services::ServeDir;
+use uuid::Uuid;
 
 mod ai;
 mod game_state;
@@ -56,16 +57,13 @@ async fn handle_socket(mut socket: WebSocket, mut reciever: Receiver<GameState>)
 
 #[tokio::main]
 async fn main() {
-    let players: Vec<Ai> = std::env::args()
+    let game_id = Uuid::new_v4().to_string();
+    let players: BTreeMap<String, Ai> = std::env::args()
         .skip(1)
-        .map(|arg| Ai::from_arg(&arg))
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap_or_else(|err| {
-            eprintln!("Error: {}", err);
-            process::exit(1);
-        });
+        .map(|arg| (Uuid::new_v4().to_string(), Ai::from_arg(&arg).unwrap()))
+        .collect();
 
-    let mut game_state = GameState::new(players.len());
+    let mut game_state = GameState::new(game_id, players.keys().cloned().collect());
 
     let (game_state_sender, _) = broadcast::channel::<GameState>(16);
 
@@ -106,36 +104,37 @@ async fn main() {
         let moves = join_all(
             players
                 .iter()
-                .enumerate()
-                .filter(|(i, _)| remaining_players_at_start.contains(i))
-                .map(|(i, ai)| {
-                    ai.make_move(&reqwest_client, game_state.turn, &game_state.spaces, i)
-                        .map(move |m| m.map(|m| (i, m)))
+                .filter(|(player_id, _)| remaining_players_at_start.contains(*player_id))
+                .map(|(player_id, ai)| {
+                    ai.make_move(
+                        &reqwest_client,
+                        game_state.turn,
+                        &game_state.spaces,
+                        player_id.to_string(),
+                        game_state.game_id.clone(),
+                    )
                 }),
         )
         .await
         .into_iter()
         .flatten()
-        .filter(|(player, m)| {
+        .filter(|m| {
             if [m.to.x, m.to.y, m.from.x, m.from.y]
                 .iter()
                 .any(|coord| *coord > BOARD_SIZE)
             {
-                println!("Player {player} tried to make a move that was out of bounds. {m:?}");
+                println!("Player tried to make a move that was out of bounds. {m:?}");
                 false
-            } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(*player) {
-                println!(
-                    "Player {player} tried to make a move from a space they didn't own. {m:?}"
-                );
+            } else if game_state.spaces[m.from.x][m.from.y].owner() != Some(&m.owner) {
+                println!("Player tried to make a move from a space they didn't own. {m:?}");
                 false
             } else if game_state.spaces[m.to.x][m.to.y] == Space::Mountain {
-                println!("Player {player} tried to make a move onto a mountain. {m:?}");
+                println!("Player tried to make a move onto a mountain. {m:?}");
                 false
             } else {
                 true
             }
         })
-        .map(|(_, m)| m)
         .collect();
 
         game_state.handle_moves(moves);

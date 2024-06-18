@@ -14,9 +14,9 @@ const NUM_MOUNTAINS: usize = 100;
 const CAPITAL_STARTING_UNITS: usize = 5;
 const NEUTRAL_TOWN_STARTING_UNITS: usize = 50;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Move {
-    pub owner: usize,
+    pub owner: String,
     pub units: usize,
     pub from: Coordinate,
     pub to: Coordinate,
@@ -24,12 +24,13 @@ pub struct Move {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct GameState {
+    pub game_id: String,
     pub spaces: Spaces,
     pub turn: usize,
 }
 impl GameState {
-    pub fn new(num_players: usize) -> Self {
-        let mut spaces = [[Space::Empty; BOARD_SIZE]; BOARD_SIZE];
+    pub fn new(game_id: String, player_ids: Vec<String>) -> Self {
+        let mut spaces: Spaces = std::array::from_fn(|_| std::array::from_fn(|_| Space::Empty));
 
         fn random_unoccupied_space(spaces: &Spaces) -> Coordinate {
             loop {
@@ -93,10 +94,10 @@ impl GameState {
             true
         }
 
-        for player_index in 0..num_players {
+        for player_id in player_ids {
             let capital_coord = random_unoccupied_space(&spaces);
             spaces[capital_coord.x][capital_coord.y] = Space::PlayerCapital {
-                owner: player_index,
+                owner: player_id,
                 units: CAPITAL_STARTING_UNITS,
             };
         }
@@ -117,7 +118,11 @@ impl GameState {
             }
         }
 
-        GameState { spaces, turn: 0 }
+        GameState {
+            game_id,
+            spaces,
+            turn: 0,
+        }
     }
 
     pub fn handle_moves(&mut self, mut moves: Vec<Move>) {
@@ -187,23 +192,23 @@ impl GameState {
                     // Attacker wins
                     self.spaces[dest.x][dest.y] = match self.spaces[dest.x][dest.y] {
                         Space::PlayerCapital { .. } => Space::PlayerCapital {
-                            owner: *owner,
+                            owner: owner.clone(),
                             units: remaining_units,
                         },
                         Space::PlayerTown { .. } => Space::PlayerTown {
-                            owner: *owner,
+                            owner: owner.clone(),
                             units: remaining_units,
                         },
                         Space::NeutralTown { .. } => Space::PlayerTown {
-                            owner: *owner,
+                            owner: owner.clone(),
                             units: remaining_units,
                         },
                         Space::PlayerEmpty { .. } => Space::PlayerEmpty {
-                            owner: *owner,
+                            owner: owner.clone(),
                             units: remaining_units,
                         },
                         Space::Empty => Space::PlayerEmpty {
-                            owner: *owner,
+                            owner: owner.clone(),
                             units: remaining_units,
                         },
                         Space::Mountain => panic!("Tried to conquer a mountain"),
@@ -240,14 +245,14 @@ impl GameState {
         }
     }
 
-    pub fn remaining_players(&self) -> BTreeSet<usize> {
+    pub fn remaining_players(&self) -> BTreeSet<String> {
         let mut remaining_players = BTreeSet::new();
 
         for x in 0..BOARD_SIZE {
             for y in 0..BOARD_SIZE {
                 self.spaces[x][y]
                     .owner()
-                    .map(|owner| remaining_players.insert(owner));
+                    .map(|owner| remaining_players.insert(owner.to_string()));
             }
         }
         remaining_players

@@ -133,7 +133,7 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
     let strengths_of_my_spaces: Vec<_> = (0..BOARD_SIZE)
         .flat_map(|x| (0..BOARD_SIZE).map(move |y| Coordinate { x, y }))
         .flat_map(|c| {
-            if body.spaces[c.x][c.y].owner() == Some(body.player) {
+            if body.spaces[c.x][c.y].owner() == Some(&body.player_id) {
                 Some((c, body.spaces[c.x][c.y].get_units()))
             } else {
                 None
@@ -146,10 +146,10 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
         .map(|c| {
             (
                 c,
-                match body.spaces[c.x][c.y] {
+                match &body.spaces[c.x][c.y] {
                     Space::NeutralTown { units: _ } => 3,
                     Space::PlayerTown { owner, units: _ } => {
-                        if owner == body.player {
+                        if *owner == body.player_id {
                             0
                         } else {
                             4
@@ -157,7 +157,7 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
                     }
 
                     Space::PlayerCapital { owner, units: _ } => {
-                        if owner == body.player {
+                        if *owner == body.player_id {
                             0
                         } else {
                             5
@@ -167,7 +167,7 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
                     Space::Mountain => -1,
                     Space::Empty => 1,
                     Space::PlayerEmpty { owner, units: _ } => {
-                        if owner == body.player {
+                        if *owner == body.player_id {
                             0
                         } else {
                             2

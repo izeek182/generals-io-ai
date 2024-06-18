@@ -45,12 +45,14 @@ impl Ai {
         reqwest_client: &reqwest::Client,
         turn: usize,
         spaces: &Spaces,
-        player: usize,
+        player_id: String,
+        game_id: String,
     ) -> Option<Move> {
         let request_body = TurnRequest {
+            player_id: player_id.clone(),
+            game_id,
             turn,
-            player,
-            spaces: *spaces,
+            spaces: spaces.clone(),
         };
         let response: Option<TurnResponse> = reqwest_client
             .post(format!("http://{}:{}", self.host, self.port))
@@ -64,7 +66,7 @@ impl Ai {
             .unwrap();
 
         response.map(|r| Move {
-            owner: player,
+            owner: player_id,
             units: spaces[r.from.x][r.from.y].get_units(),
             from: r.from,
             to: r.to,

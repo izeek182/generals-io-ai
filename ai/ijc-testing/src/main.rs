@@ -8,7 +8,9 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
     let mut my_spaces = vec![];
     for x in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
-            if body.spaces[x][y].owner() == Some(body.player) && body.spaces[x][y].get_units() > 0 {
+            if body.spaces[x][y].owner() == Some(&body.player_id)
+                && body.spaces[x][y].get_units() > 0
+            {
                 my_spaces.push(Coordinate { x, y });
             }
         }

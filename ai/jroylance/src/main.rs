@@ -8,7 +8,9 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
     let mut my_spaces = vec![];
     for x in 0..BOARD_SIZE {
         for y in 0..BOARD_SIZE {
-            if body.spaces[x][y].owner() == Some(body.player) && body.spaces[x][y].get_units() > 0 {
+            if body.spaces[x][y].owner() == Some(&body.player_id)
+                && body.spaces[x][y].get_units() > 0
+            {
                 my_spaces.push(Coordinate { x, y });
             }
         }
@@ -20,7 +22,7 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
                 .into_iter()
                 .filter(|to| {
                     body.spaces[to.x][to.y] != Space::Mountain
-                        && body.spaces[to.x][to.y].owner() != Some(body.player)
+                        && body.spaces[to.x][to.y].owner() != Some(&body.player_id)
                         && body.spaces[to.x][to.y].get_units() + 2
                             < body.spaces[from.x][from.y].get_units()
                 })
@@ -35,7 +37,7 @@ async fn turn_handler(Json(body): Json<TurnRequest>) -> Json<Option<TurnResponse
             let mut possible_tos = from
                 .surrounding()
                 .into_iter()
-                .filter(|to| body.spaces[to.x][to.y].owner() == Some(body.player))
+                .filter(|to| body.spaces[to.x][to.y].owner() == Some(&body.player_id))
                 .map(|to| (*from, to))
                 .collect::<Vec<_>>();
 
