@@ -83,7 +83,7 @@ async fn turn_handler(
             let their_units = body.spaces[their_space.x][their_space.y].get_units();
             if my_units > their_units {
                 let (distance, path) = cache
-                    .entry((*my_space, *their_space))
+                    .entry((body.game_id.clone(), *my_space, *their_space))
                     .or_insert_with(|| distance(*my_space, *their_space, &body.spaces));
 
                 let weight = {
@@ -136,7 +136,8 @@ async fn turn_handler(
     }
 }
 
-type DistanceCache = Arc<Mutex<HashMap<(Coordinate, Coordinate), (usize, Vec<Coordinate>)>>>;
+type DistanceCache =
+    Arc<Mutex<HashMap<(String, Coordinate, Coordinate), (usize, Vec<Coordinate>)>>>;
 
 #[tokio::main]
 async fn main() {
