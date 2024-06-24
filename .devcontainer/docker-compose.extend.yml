@@ -8,4 +8,4 @@ services:
       - seccomp:unconfined
 
     # Overrides default command so things don't shut down after the process ends.
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    command: /bin/sh -c "sudo /bin/chown -R vscode:vscode /workspace && while sleep 1000; do :; done"
