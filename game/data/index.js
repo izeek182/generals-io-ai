@@ -42,6 +42,7 @@ socket.addEventListener("message", (event) => {
     contentDiv.innerHTML = "";
 
     const table = document.createElement("table");
+    table.classList.add("game-board");
 
     let playerStats = {};
 
@@ -110,5 +111,9 @@ socket.addEventListener("message", (event) => {
         leaderboard.appendChild(tr);
     }
 
-    contentDiv.replaceChildren(table, leaderboard);
+    const leaderboardDiv = document.createElement("div");
+    leaderboardDiv.classList.add("leaderboard");
+    leaderboardDiv.appendChild(leaderboard);
+
+    contentDiv.replaceChildren(table, leaderboardDiv);
 });
