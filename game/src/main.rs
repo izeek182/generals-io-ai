@@ -141,15 +141,15 @@ async fn main() {
 
         game_state.populate_spaces();
 
-        if game_state.remaining_players().len() <= 1 {
-            println!("Game over");
-            break;
-        }
-
         game_state.turn += 1;
 
         // Ignore errors because there might be no subcribers
         let _ = game_state_sender.send(game_state.clone());
+
+        if game_state.remaining_players().len() <= 1 {
+            println!("Game over");
+            break;
+        }
 
         sleep(Duration::from_millis(50)).await;
     }
