@@ -19,7 +19,7 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    sync::broadcast::{self, Receiver, Sender},
+    sync::watch::{self, Receiver, Sender},
     time::sleep,
 };
 use tower_http::services::ServeDir;
@@ -34,14 +34,15 @@ async fn ws_handler(
 ) -> impl IntoResponse {
     println!("New user connected.");
 
-    let reciever = web_socket_sender.subscribe();
+    let receiver = web_socket_sender.subscribe();
 
-    ws.on_upgrade(move |socket| handle_socket(socket, reciever))
+    ws.on_upgrade(move |socket| handle_socket(socket, receiver))
 }
 
 /// Actual websocket statemachine (one will be spawned per connection)
-async fn handle_socket(mut socket: WebSocket, mut reciever: Receiver<GameState>) {
-    while let Ok(message) = reciever.recv().await {
+async fn handle_socket(mut socket: WebSocket, mut receiver: Receiver<GameState>) {
+    loop {
+        let message = receiver.borrow_and_update().clone();
         if socket
             .send(Message::Text(serde_json::to_string(&message).unwrap()))
             .await
@@ -49,6 +50,10 @@ async fn handle_socket(mut socket: WebSocket, mut reciever: Receiver<GameState>)
         {
             println!("Unable to send ws message, closing socket");
             return;
+        }
+
+        if receiver.changed().await.is_err() {
+            break;
         }
     }
 
@@ -65,11 +70,11 @@ async fn main() {
 
     let mut game_state = GameState::new(game_id, players.keys().cloned().collect());
 
-    let (game_state_sender, _) = broadcast::channel::<GameState>(16);
+    let (game_state_sender, _) = watch::channel::<GameState>(game_state.clone());
 
     let websocket_sender = game_state_sender.clone();
 
-    tokio::spawn(async move {
+    let spectate_listener = tokio::spawn(async move {
         let port: u16 = std::env::var("FORCE_PORT")
             .ok()
             .and_then(|val| val.parse().ok())
@@ -143,8 +148,7 @@ async fn main() {
 
         game_state.turn += 1;
 
-        // Ignore errors because there might be no subcribers
-        let _ = game_state_sender.send(game_state.clone());
+        game_state_sender.send_replace(game_state.clone());
 
         if game_state.remaining_players().len() <= 1 {
             println!("Game over");
@@ -153,4 +157,6 @@ async fn main() {
 
         sleep(Duration::from_millis(50)).await;
     }
+
+    spectate_listener.await.unwrap();
 }
