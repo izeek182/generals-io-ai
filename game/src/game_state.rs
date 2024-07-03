@@ -167,6 +167,7 @@ impl GameState {
             new_moves
         };
 
+        let mut takeovers: Vec<(String, String)> = Vec::new();
         for (dest, mut moves) in moves_with_unit_counts.into_iter() {
             // Progressively eliminate attacking armies by subtracting the total units of the weakest attacker, and removing armies with 0 units
             while moves.len() > 1 {
@@ -190,11 +191,17 @@ impl GameState {
                 if defending_units < *source_units {
                     let remaining_units = source_units - (defending_units);
                     // Attacker wins
-                    self.spaces[dest.x][dest.y] = match self.spaces[dest.x][dest.y] {
-                        Space::PlayerCapital { .. } => Space::PlayerCapital {
-                            owner: owner.clone(),
-                            units: remaining_units,
-                        },
+                    self.spaces[dest.x][dest.y] = match &self.spaces[dest.x][dest.y] {
+                        Space::PlayerCapital {
+                            owner: looser,
+                            units: _,
+                        } => {
+                            takeovers.push((owner.to_owned(), looser.to_owned()));
+                            Space::PlayerTown {
+                                owner: owner.clone(),
+                                units: remaining_units,
+                            }
+                        }
                         Space::PlayerTown { .. } => Space::PlayerTown {
                             owner: owner.clone(),
                             units: remaining_units,
@@ -221,6 +228,10 @@ impl GameState {
                     }
                 }
             }
+        }
+
+        for (winner, looser) in takeovers {
+            self.takeover(&winner, &looser);
         }
     }
 
@@ -256,6 +267,17 @@ impl GameState {
             }
         }
         remaining_players
+    }
+
+    fn takeover(&mut self, winner_id: &String, looser_id: &String) {
+        for x in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                let space = &mut self.spaces[x][y];
+                if space.owner().is_some() && space.owner().unwrap() == looser_id {
+                    space.unsafe_set_owner(winner_id.to_owned());
+                }
+            }
+        }
     }
 }
 

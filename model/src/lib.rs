@@ -87,6 +87,16 @@ impl Space {
             Space::NeutralTown { .. } | Space::Empty | Space::Mountain => None,
         }
     }
+    pub fn unsafe_set_owner(&mut self, new_owner: String) {
+        match self {
+            Space::PlayerCapital { owner, units: _ } => *owner = new_owner,
+            Space::PlayerTown { owner, units: _ } => *owner = new_owner,
+            Space::PlayerEmpty { owner, units: _ } => *owner = new_owner,
+            _ => {
+                panic!("Tried to set owner on invalid space type")
+            }
+        }
+    }
 }
 
 pub type Spaces = [[Space; BOARD_SIZE]; BOARD_SIZE];
