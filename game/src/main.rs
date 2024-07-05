@@ -11,7 +11,7 @@ use axum::{
     Router,
 };
 use futures::future::join_all;
-use game_state::{GameState, BOARD_SIZE};
+use game_state::{DeltafiedGameState, GameState, BOARD_SIZE};
 use model::Space;
 use std::collections::BTreeMap;
 use std::{
@@ -30,7 +30,7 @@ mod game_state;
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    State(web_socket_sender): State<Sender<GameState>>,
+    State(web_socket_sender): State<Sender<DeltafiedGameState>>,
 ) -> impl IntoResponse {
     println!("New user connected.");
 
@@ -40,21 +40,31 @@ async fn ws_handler(
 }
 
 /// Actual websocket statemachine (one will be spawned per connection)
-async fn handle_socket(mut socket: WebSocket, mut receiver: Receiver<GameState>) {
-    loop {
-        let message = receiver.borrow_and_update().clone();
-        if socket
-            .send(Message::Text(serde_json::to_string(&message).unwrap()))
-            .await
-            .is_err()
-        {
+async fn handle_socket(mut socket: WebSocket, mut receiver: Receiver<DeltafiedGameState>) {
+    let deltafied_state = receiver.borrow_and_update().clone();
+    if socket
+        .send(Message::Text(
+            serde_json::to_string(&deltafied_state).unwrap(),
+        ))
+        .await
+        .is_err()
+    {
+        println!("Unable to send initial state, closing socket");
+        return;
+    }
+
+    let mut deltas_sent = deltafied_state.deltas.len();
+
+    while receiver.changed().await.is_ok() {
+        let full_deltas = receiver.borrow_and_update().deltas.clone();
+
+        let deltas = full_deltas[deltas_sent..].to_vec();
+        let json_deltas = format!("{{\"deltas\":{}}}", serde_json::to_string(&deltas).unwrap());
+        if socket.send(Message::Text(json_deltas)).await.is_err() {
             println!("Unable to send ws message, closing socket");
             return;
         }
-
-        if receiver.changed().await.is_err() {
-            break;
-        }
+        deltas_sent = full_deltas.len();
     }
 
     panic!("Shouldn't ever reach the end of a websocket connection");
@@ -69,8 +79,9 @@ async fn main() {
         .collect();
 
     let mut game_state = GameState::new(game_id, players.keys().cloned().collect());
+    let mut deltafied_game_state = DeltafiedGameState::new(&game_state);
 
-    let (game_state_sender, _) = watch::channel::<GameState>(game_state.clone());
+    let (game_state_sender, _) = watch::channel::<DeltafiedGameState>(deltafied_game_state.clone());
 
     let websocket_sender = game_state_sender.clone();
 
@@ -142,13 +153,17 @@ async fn main() {
         })
         .collect();
 
+        let prev_game_state = game_state.clone();
+
         game_state.handle_moves(moves);
 
         game_state.populate_spaces();
 
         game_state.turn += 1;
 
-        game_state_sender.send_replace(game_state.clone());
+        deltafied_game_state.add_delta(&prev_game_state, &game_state);
+
+        game_state_sender.send_replace(deltafied_game_state.clone());
 
         if game_state.remaining_players().len() <= 1 {
             println!("Game over");

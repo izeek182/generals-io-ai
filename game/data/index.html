@@ -1,15 +1,30 @@
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="styles.css">
     <title>Definitely Not Generals.io</title>
 </head>
+
 <body>
     <div id="content">
-        Loading...
+        <div class="board-and-controls">
+            <div id="board">
+                Loading...
+            </div>
+            <div id="turn-controls">
+                <button onclick="onClickBackward()"> &lt </button>
+                <input id="turn-input" type="number" min="0" max="0" onchange="onInputChange(this.value)"></input>
+                <span id="total-turns"></span>
+                <button onclick="onClickForward()"> &gt </button>
+                <button onclick="onClickLatest()">Latest</button>
+            </div>
+        </div>
+        <div id="leaderboard"></div>
     </div>
 
     <script src="index.js"></script>
 </body>
+
 </html>

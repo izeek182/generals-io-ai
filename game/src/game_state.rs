@@ -281,6 +281,46 @@ impl GameState {
     }
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct Delta {
+    coord: Coordinate,
+    prev: Space,
+    next: Space,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct DeltafiedGameState {
+    pub initial_game_state: GameState,
+    pub deltas: Vec<Vec<Delta>>,
+}
+
+impl DeltafiedGameState {
+    pub fn new(state: &GameState) -> DeltafiedGameState {
+        return DeltafiedGameState {
+            initial_game_state: state.clone(),
+            deltas: Vec::new(),
+        };
+    }
+
+    pub fn add_delta(&mut self, prev_state: &GameState, next_state: &GameState) {
+        let mut new_delta: Vec<Delta> = Vec::new();
+        for x in 0..BOARD_SIZE {
+            for y in 0..BOARD_SIZE {
+                let prev_space = &prev_state.spaces[x][y];
+                let next_space = &next_state.spaces[x][y];
+                if prev_space != next_space {
+                    new_delta.push(Delta {
+                        coord: Coordinate { x, y },
+                        prev: prev_space.clone(),
+                        next: next_space.clone(),
+                    })
+                }
+            }
+        }
+        self.deltas.push(new_delta);
+    }
+}
+
 impl Display for GameState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..BOARD_SIZE {

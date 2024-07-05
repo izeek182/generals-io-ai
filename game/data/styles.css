@@ -19,11 +19,25 @@
     justify-content: center;
 }
 
-.leaderboard {
+#leaderboard {
     display: flex;
     flex-direction: column;
 }
 
-.game-board {
+.board-and-controls {
     flex-shrink: 0;
+}
+
+#turn-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+
+    & button {
+        margin: 0 8px;
+    }
+}
+
+#total-turns {
+    margin-left: 8px;
 }

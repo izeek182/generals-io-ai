@@ -1,5 +1,6 @@
 const socket = new WebSocket("/spectate");
-const contentDiv = document.getElementById("content");
+const boardDiv = document.getElementById("board");
+const leaderboardDiv = document.getElementById("leaderboard");
 
 socket.addEventListener("open", (event) => {
     console.log("Connected");
@@ -35,11 +36,10 @@ function getRandomColorForPlayerId(playerId) {
     return colorCache[playerId];
 }
 
-// Listen for messages
-socket.addEventListener("message", (event) => {
-    const spaces = JSON.parse(event.data)["spaces"];
+function renderState() {
+    const spaces = gameState["spaces"]
 
-    contentDiv.innerHTML = "";
+    boardDiv.innerHTML = "";
 
     const table = document.createElement("table");
     table.classList.add("game-board");
@@ -88,6 +88,7 @@ socket.addEventListener("message", (event) => {
         }
         table.appendChild(tr);
     }
+    boardDiv.replaceChildren(table);
 
     const leaderboard = document.createElement("table");
     for (const [key, value] of Object.entries(playerStats).sort((a, b) =>
@@ -110,10 +111,94 @@ socket.addEventListener("message", (event) => {
 
         leaderboard.appendChild(tr);
     }
+    leaderboardDiv.replaceChildren(leaderboard);
+}
 
-    const leaderboardDiv = document.createElement("div");
-    leaderboardDiv.classList.add("leaderboard");
-    leaderboardDiv.appendChild(leaderboard);
+function collapseDeltas(deltas) {
+    let deltaMap = new Map();
+    deltas.forEach(delta => delta.forEach(change => {
+        let key = change["coord"].x + "," + change["coord"].y;
+        if (deltaMap.has(key)) {
+            deltaMap.get(key)["next"] = change["next"];
+        } else {
+            deltaMap.set(key, { ...change });
+        }
+    }));
+    return [...deltaMap.values()];
+}
 
-    contentDiv.replaceChildren(table, leaderboardDiv);
+function goToTurn(turn) {
+    if (turn < 0 || turn > deltas.length || gameState["turn"] == turn) {
+        return;
+    }
+
+    if (gameState["turn"] > turn) {
+        let collapsedDelta = collapseDeltas(deltas.slice(turn, gameState["turn"]));
+        applyDeltaBackward(collapsedDelta);
+    } else {
+        let collapsedDelta = collapseDeltas(deltas.slice(gameState["turn"], turn));
+        applyDeltaForward(collapsedDelta);
+    }
+
+    document.getElementById("turn-input").value = turn;
+    gameState["turn"] = turn;
+}
+
+function applyDeltaForward(delta) {
+    delta.forEach(change => {
+        coord = change["coord"];
+        gameState["spaces"][coord.x][coord.y] = change["next"];
+    });
+}
+
+function applyDeltaBackward(delta) {
+    delta.forEach(change => {
+        coord = change["coord"];
+        gameState["spaces"][coord.x][coord.y] = change["prev"];
+    });
+}
+
+function onClickForward() {
+    viewLatest = false;
+    goToTurn(gameState["turn"] + 1);
+    renderState();
+}
+
+function onClickBackward() {
+    viewLatest = false;
+    goToTurn(gameState["turn"] - 1);
+    renderState();
+}
+
+function onInputChange(turnString) {
+    viewLatest = false;
+    goToTurn(parseInt(turnString));
+    renderState();
+}
+
+function onClickLatest() {
+    viewLatest = true;
+    goToTurn(deltas.length);
+    renderState();
+}
+
+let deltas = [];
+let gameState = { "game_id": undefined, "spaces": undefined, "turn": 0, }
+let viewLatest = true;
+
+// Listen for messages
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    if (data["initial_game_state"] !== undefined) {
+        gameState = data["initial_game_state"];
+    }
+    if (data["deltas"] !== undefined) {
+        deltas = deltas.concat(data["deltas"]);
+        document.getElementById("turn-input").setAttribute("max", deltas.length);
+        document.getElementById("total-turns").innerText = "/ " + deltas.length;
+        if (viewLatest) {
+            goToTurn(deltas.length);
+            renderState();
+        }
+    }
 });
