@@ -10,6 +10,7 @@ use axum::{
     routing::get,
     Router,
 };
+use clap::{arg, Parser};
 use futures::future::join_all;
 use game_state::{DeltafiedGameState, GameState, BOARD_SIZE};
 use model::Space;
@@ -27,6 +28,14 @@ use uuid::Uuid;
 
 mod ai;
 mod game_state;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(long)]
+    no_sleep: bool,
+    #[arg(num_args = 1..)]
+    player_args: Vec<String>,
+}
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -73,8 +82,10 @@ async fn handle_socket(mut socket: WebSocket, mut receiver: Receiver<DeltafiedGa
 #[tokio::main]
 async fn main() {
     let game_id = Uuid::new_v4().to_string();
-    let players: BTreeMap<String, Ai> = std::env::args()
-        .skip(1)
+    let args = Args::parse();
+    let players: BTreeMap<String, Ai> = args
+        .player_args
+        .into_iter()
         .map(|arg| (Uuid::new_v4().to_string(), Ai::from_arg(&arg).unwrap()))
         .collect();
 
@@ -170,7 +181,9 @@ async fn main() {
             break;
         }
 
-        sleep(Duration::from_millis(50)).await;
+        if !args.no_sleep {
+            sleep(Duration::from_millis(50)).await;
+        }
     }
 
     spectate_listener.await.unwrap();
